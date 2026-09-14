@@ -56,20 +56,20 @@ create policy "anon all notes" on notes
    - **Project URL**（形如 `https://xxxx.supabase.co`）
    - **anon public key**（`eyJ...` 开头的长字符串）
 
-## 二、部署到 Netlify
+## 二、部署
 
-两种方式任选：
+当前已通过 **GitHub Pages** 部署，直接访问：
 
-- **拖拽部署（最快）**：打开 [app.netlify.com/drop](https://app.netlify.com/drop)，把包含 `index.html` 的整个文件夹拖进去即可。
-- **Git 部署**：把本目录推到 GitHub 仓库，在 Netlify「Add new site → Import an existing project」选择该仓库。无需构建命令，发布目录留空（即根目录）。
+**https://licongxiao19.github.io/vocab-site/**
 
-部署后得到一个固定网址，手机浏览器打开 → 菜单「添加到主屏幕」，即可像 App 一样使用。
+仓库：`licongxiao19/vocab-site`（master 分支根目录自动发布，推送即更新）。
+Supabase 配置已预置在 `index.html` 中，任何设备打开即用，无需手动填写。
 
 ## 三、开始使用
 
-1. 打开网址 → 右下角「设置」页 → 填入 Project URL 和 anon key → 「保存配置并连接」。
-2. 每台设备（手机 / 电脑）都填一次同样的配置，数据自动共用。
-3. 到「记录」页开始记单词；「单词」页搜索 / 编辑 / 删除；「复习」页刷卡。
+1. 手机/电脑浏览器打开上面的网址（手机可用浏览器菜单「添加到主屏幕」，像 App 一样使用）。
+2. 到「记录」页开始记单词；「单词」页搜索 / 编辑 / 删除；「复习」页刷卡。
+3. 如需更换 Supabase 项目，在「设置」页填入新的 URL 和 anon key 即可覆盖预置配置。
 
 ## 本地调试
 
@@ -85,3 +85,4 @@ npx serve .
 - 「认识 / 不认识」按单词维度计数（`unknown_count`），点「认识」清零。
 - 每次成功联网拉取后会缓存到浏览器，断网时只读查看，写入需联网。
 - 建议定期在设置页「导出全部数据」做备份。
+
