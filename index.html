@@ -1,0 +1,687 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0f1115">
+<title>单词本</title>
+<style>
+  :root {
+    --bg: #0f1115;
+    --card: #1a1e26;
+    --card2: #222835;
+    --text: #e8eaf0;
+    --muted: #8b93a5;
+    --accent: #5b8cff;
+    --accent2: #7aa5ff;
+    --green: #3fce8b;
+    --red: #ff6b6b;
+    --border: #2a3140;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text);
+    font-family: -apple-system, "PingFang SC", "Microsoft YaHei", "Segoe UI", sans-serif; }
+  body { max-width: 520px; margin: 0 auto; min-height: 100vh; display: flex; flex-direction: column; }
+
+  header { padding: 14px 16px 10px; display: flex; align-items: center; justify-content: space-between;
+    position: sticky; top: 0; background: var(--bg); z-index: 5; border-bottom: 1px solid var(--border); }
+  header h1 { font-size: 18px; margin: 0; }
+  #syncDot { width: 10px; height: 10px; border-radius: 50%; background: var(--muted); }
+  #syncDot.ok { background: var(--green); }
+  #syncDot.err { background: var(--red); }
+
+  main { flex: 1; padding: 14px 14px 90px; }
+  .page { display: none; }
+  .page.active { display: block; }
+
+  nav { position: fixed; bottom: 0; left: 0; right: 0; max-width: 520px; margin: 0 auto;
+    display: flex; background: var(--card); border-top: 1px solid var(--border);
+    padding-bottom: env(safe-area-inset-bottom); z-index: 10; }
+  nav button { flex: 1; background: none; border: none; color: var(--muted); font-size: 13px;
+    padding: 10px 0 12px; cursor: pointer; }
+  nav button .ico { display: block; font-size: 20px; margin-bottom: 2px; }
+  nav button.active { color: var(--accent2); }
+
+  label { display: block; font-size: 13px; color: var(--muted); margin: 14px 0 6px; }
+  input[type=text], input[type=url], input[type=password], textarea, select {
+    width: 100%; background: var(--card); border: 1px solid var(--border); border-radius: 10px;
+    color: var(--text); font-size: 16px; padding: 12px; outline: none; font-family: inherit; }
+  input:focus, textarea:focus { border-color: var(--accent); }
+  textarea { min-height: 90px; resize: vertical; }
+
+  .btn { display: block; width: 100%; border: none; border-radius: 10px; padding: 14px;
+    font-size: 16px; font-weight: 600; cursor: pointer; margin-top: 16px; }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:disabled { opacity: .5; }
+  .btn-ghost { background: var(--card2); color: var(--text); }
+  .btn-danger { background: transparent; color: var(--red); border: 1px solid var(--red); }
+
+  .chips { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+  .chip { background: var(--card2); border: 1px solid var(--border); color: var(--muted);
+    border-radius: 999px; padding: 7px 14px; font-size: 13px; cursor: pointer; }
+  .chip.on { color: var(--accent2); border-color: var(--accent); }
+
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+    padding: 14px; margin-bottom: 12px; }
+  .word-head { display: flex; align-items: center; justify-content: space-between; cursor: pointer; }
+  .word-head .w { font-size: 18px; font-weight: 700; }
+  .word-head .meta { font-size: 12px; color: var(--muted); display: flex; gap: 8px; align-items: center; }
+  .badge { background: var(--card2); border-radius: 999px; padding: 2px 9px; font-size: 12px; color: var(--muted); }
+  .badge.unk { background: rgba(255,107,107,.15); color: var(--red); }
+
+  .note-item { border-top: 1px solid var(--border); padding: 10px 0 4px; margin-top: 10px; }
+  .note-item .nt { white-space: pre-wrap; line-height: 1.55; font-size: 15px; }
+  .note-fields { margin-top: 6px; font-size: 13.5px; color: var(--muted); line-height: 1.7; }
+  .note-fields b { color: var(--text); font-weight: 600; }
+  .note-foot { display: flex; justify-content: space-between; align-items: center; margin-top: 6px; }
+  .note-foot time { font-size: 12px; color: var(--muted); }
+  .note-foot .ops button { background: none; border: none; color: var(--accent2); font-size: 13px;
+    cursor: pointer; padding: 6px 4px; margin-left: 10px; }
+  .note-foot .ops button.del { color: var(--red); }
+  .word-del { margin-top: 10px; text-align: right; }
+  .word-del button { background: none; border: none; color: var(--red); font-size: 13px; cursor: pointer; padding: 6px; }
+
+  .empty { text-align: center; color: var(--muted); padding: 60px 20px; font-size: 14px; line-height: 1.8; }
+
+  /* 复习卡片 */
+  .review-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+  .review-top .prog { font-size: 14px; color: var(--muted); }
+  .toggle { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); cursor: pointer; }
+  .toggle input { accent-color: var(--accent); width: 18px; height: 18px; }
+  .flip-wrap { perspective: 1200px; }
+  .flip { position: relative; width: 100%; min-height: 340px; transform-style: preserve-3d;
+    transition: transform .45s; cursor: pointer; }
+  .flip.flipped { transform: rotateY(180deg); }
+  .face { position: absolute; inset: 0; backface-visibility: hidden; -webkit-backface-visibility: hidden;
+    background: var(--card); border: 1px solid var(--border); border-radius: 16px;
+    padding: 22px; display: flex; flex-direction: column; overflow-y: auto; max-height: 56vh; min-height: 340px; }
+  .face.front { align-items: center; justify-content: center; }
+  .face.front .fw { font-size: 34px; font-weight: 800; text-align: center; word-break: break-word; }
+  .face.front .hint { margin-top: 16px; font-size: 13px; color: var(--muted); }
+  .face.back { transform: rotateY(180deg); }
+  .face.back .bw { font-size: 22px; font-weight: 800; margin-bottom: 4px; }
+  .review-btns { display: flex; gap: 12px; margin-top: 16px; }
+  .review-btns .btn { margin-top: 0; }
+  .btn-no { background: rgba(255,107,107,.15); color: var(--red); }
+  .btn-yes { background: rgba(63,206,139,.15); color: var(--green); }
+
+  /* 弹层 */
+  .modal-mask { position: fixed; inset: 0; background: rgba(0,0,0,.6); display: none;
+    align-items: flex-end; justify-content: center; z-index: 50; }
+  .modal-mask.show { display: flex; }
+  .modal { background: var(--bg); border: 1px solid var(--border); border-radius: 16px 16px 0 0;
+    width: 100%; max-width: 520px; max-height: 85vh; overflow-y: auto; padding: 18px 16px 30px; }
+  .modal h3 { margin: 0 0 4px; font-size: 16px; }
+
+  #toast { position: fixed; left: 50%; bottom: 96px; transform: translateX(-50%) translateY(20px);
+    background: var(--card2); border: 1px solid var(--border); color: var(--text);
+    padding: 11px 20px; border-radius: 999px; font-size: 14px; opacity: 0; pointer-events: none;
+    transition: all .25s; z-index: 99; max-width: 86%; text-align: center; }
+  #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  #toast.err { border-color: var(--red); color: var(--red); }
+
+  .stat-row { display: flex; gap: 10px; margin: 14px 0; }
+  .stat { flex: 1; background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+    padding: 14px; text-align: center; }
+  .stat .n { font-size: 22px; font-weight: 800; }
+  .stat .t { font-size: 12px; color: var(--muted); margin-top: 4px; }
+  .hint-text { font-size: 12.5px; color: var(--muted); line-height: 1.7; margin-top: 10px; }
+  .setup-warn { background: rgba(91,140,255,.1); border: 1px solid var(--accent); border-radius: 12px;
+    padding: 14px; font-size: 14px; line-height: 1.7; margin-bottom: 14px; }
+</style>
+</head>
+<body>
+<header>
+  <h1 id="pageTitle">记录</h1>
+  <div id="syncDot" title="同步状态"></div>
+</header>
+
+<main>
+  <!-- 记录页 -->
+  <section id="page-add" class="page active">
+    <div id="setupWarn" class="setup-warn" style="display:none">
+      还没有配置 Supabase。请先到「设置」页填写项目 URL 和 anon key，数据才能保存和同步。
+    </div>
+    <label for="fWord">单词</label>
+    <input type="text" id="fWord" placeholder="输入英语单词" autocomplete="off" autocapitalize="off">
+    <label for="fNote">注释</label>
+    <textarea id="fNote" placeholder="随手写点什么…（必填）"></textarea>
+    <div class="chips">
+      <button class="chip" data-f="pos">＋ 词性</button>
+      <button class="chip" data-f="meaning">＋ 中文意思</button>
+      <button class="chip" data-f="example">＋ 例句</button>
+    </div>
+    <div id="extraFields">
+      <div class="ef" data-f="pos" style="display:none">
+        <label>词性</label>
+        <input type="text" id="fPos" placeholder="如：n. / v. / adj.">
+      </div>
+      <div class="ef" data-f="meaning" style="display:none">
+        <label>中文意思</label>
+        <input type="text" id="fMeaning" placeholder="中文释义">
+      </div>
+      <div class="ef" data-f="example" style="display:none">
+        <label>例句</label>
+        <textarea id="fExample" style="min-height:60px" placeholder="例句"></textarea>
+      </div>
+    </div>
+    <button class="btn btn-primary" id="btnSave">保存</button>
+    <div id="dupHint" class="hint-text"></div>
+  </section>
+
+  <!-- 单词页 -->
+  <section id="page-list" class="page">
+    <input type="text" id="searchBox" placeholder="🔍 搜索单词、注释、意思、例句…" autocomplete="off">
+    <div style="height:14px"></div>
+    <div id="wordList"></div>
+  </section>
+
+  <!-- 复习页 -->
+  <section id="page-review" class="page">
+    <div id="reviewMain">
+      <div class="review-top">
+        <span class="prog" id="reviewProg"></span>
+        <label class="toggle"><input type="checkbox" id="onlyUnknown"> 只刷不认识</label>
+      </div>
+      <div class="flip-wrap">
+        <div class="flip" id="flipCard">
+          <div class="face front">
+            <div class="fw" id="cardWord"></div>
+            <div class="hint">点击卡片查看注释</div>
+          </div>
+          <div class="face back" id="cardBack"></div>
+        </div>
+      </div>
+      <div class="review-btns">
+        <button class="btn btn-no" id="btnNo">不认识</button>
+        <button class="btn btn-yes" id="btnYes">认识</button>
+      </div>
+    </div>
+    <div id="reviewDone" class="empty" style="display:none">
+      🎉 这一轮刷完啦！<br><br>
+      <button class="btn btn-primary" id="btnAgain">再来一轮</button>
+    </div>
+    <div id="reviewEmpty" class="empty" style="display:none">还没有可复习的单词<br>先去「记录」页添加吧</div>
+  </section>
+
+  <!-- 设置页 -->
+  <section id="page-settings" class="page">
+    <div class="stat-row">
+      <div class="stat"><div class="n" id="statWords">0</div><div class="t">单词</div></div>
+      <div class="stat"><div class="n" id="statNotes">0</div><div class="t">注释</div></div>
+      <div class="stat"><div class="n" id="statUnknown">0</div><div class="t">待复习</div></div>
+    </div>
+    <label for="cfgUrl">Supabase 项目 URL</label>
+    <input type="url" id="cfgUrl" placeholder="https://xxxx.supabase.co" autocomplete="off">
+    <label for="cfgKey">anon public key</label>
+    <input type="password" id="cfgKey" placeholder="eyJhbGciOi…" autocomplete="off">
+    <button class="btn btn-primary" id="btnSaveCfg">保存配置并连接</button>
+    <div class="hint-text">在 Supabase 项目的 Settings → API 里可以找到这两项。配置会保存在本设备浏览器中。</div>
+    <button class="btn btn-ghost" id="btnExport">导出全部数据（JSON）</button>
+    <button class="btn btn-ghost" id="btnImport">从 JSON 导入</button>
+    <input type="file" id="importFile" accept="application/json,.json" style="display:none">
+    <button class="btn btn-ghost" id="btnRefresh">重新拉取数据</button>
+  </section>
+</main>
+
+<nav>
+  <button data-page="add" class="active"><span class="ico">✏️</span>记录</button>
+  <button data-page="list"><span class="ico">📖</span>单词</button>
+  <button data-page="review"><span class="ico">🃏</span>复习</button>
+  <button data-page="settings"><span class="ico">⚙️</span>设置</button>
+</nav>
+
+<!-- 编辑注释弹层 -->
+<div class="modal-mask" id="editMask">
+  <div class="modal">
+    <h3>编辑注释</h3>
+    <label>注释</label>
+    <textarea id="eNote"></textarea>
+    <label>词性</label>
+    <input type="text" id="ePos">
+    <label>中文意思</label>
+    <input type="text" id="eMeaning">
+    <label>例句</label>
+    <textarea id="eExample" style="min-height:60px"></textarea>
+    <button class="btn btn-primary" id="btnEditSave">保存修改</button>
+    <button class="btn btn-ghost" id="btnEditCancel">取消</button>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+"use strict";
+/* ================= 配置与状态 ================= */
+const LS_CFG = "vocab_cfg_v1";
+const LS_CACHE = "vocab_cache_v1";
+// 预置的 Supabase 配置（anon key 本就是公开密钥，可在设置页覆盖）
+const DEFAULT_CFG = {
+  url: "https://irvyrkwljspvyhbwdpdd.supabase.co",
+  key: "sb_publishable_pczFMH7EcmXW8xTfSaKCNg_MPdFZzSw"
+};
+let cfg = { ...DEFAULT_CFG, ...JSON.parse(localStorage.getItem(LS_CFG) || "{}") };
+let words = [];        // [{id, word, unknown_count, created_at, notes:[...] }]
+let editingNoteId = null;
+let review = { deck: [], idx: 0, flipped: false };
+
+const $ = id => document.getElementById(id);
+
+function toast(msg, isErr) {
+  const t = $("toast");
+  t.textContent = msg;
+  t.className = "show" + (isErr ? " err" : "");
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => t.className = "", 2200);
+}
+function setSync(state) { $("syncDot").className = state || ""; }
+function esc(s) {
+  return String(s == null ? "" : s).replace(/[&<>"']/g,
+    c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+function fmtDate(iso) {
+  const d = new Date(iso);
+  const p = n => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
+/* ================= Supabase REST ================= */
+function hasCfg() { return cfg.url && cfg.key; }
+async function api(path, opts = {}) {
+  const res = await fetch(cfg.url.replace(/\/+$/, "") + "/rest/v1/" + path, {
+    method: opts.method || "GET",
+    headers: {
+      apikey: cfg.key,
+      Authorization: "Bearer " + cfg.key,
+      "Content-Type": "application/json",
+      Prefer: opts.prefer || "return=representation"
+    },
+    body: opts.body ? JSON.stringify(opts.body) : undefined
+  });
+  if (!res.ok) {
+    const txt = await res.text().catch(() => "");
+    const e = new Error("请求失败 " + res.status);
+    e.status = res.status; e.detail = txt;
+    throw e;
+  }
+  const txt = await res.text();
+  return txt ? JSON.parse(txt) : null;
+}
+
+async function loadAll(fromCacheOnly) {
+  if (!hasCfg()) { renderAll(); return; }
+  if (!fromCacheOnly) {
+    try {
+      setSync("");
+      const [ws, ns] = await Promise.all([
+        api("words?select=*&order=created_at.asc"),
+        api("notes?select=*&order=created_at.asc")
+      ]);
+      joinData(ws, ns);
+      localStorage.setItem(LS_CACHE, JSON.stringify({ ws, ns }));
+      setSync("ok");
+    } catch (e) {
+      setSync("err");
+      const cache = localStorage.getItem(LS_CACHE);
+      if (cache) {
+        const { ws, ns } = JSON.parse(cache);
+        joinData(ws, ns);
+        toast("网络异常，显示离线缓存数据", true);
+      } else {
+        toast("加载失败：" + e.message, true);
+      }
+    }
+  }
+  renderAll();
+}
+function joinData(ws, ns) {
+  const byId = {};
+  words = (ws || []).map(w => (byId[w.id] = { ...w, notes: [] }));
+  (ns || []).forEach(n => { if (byId[n.word_id]) byId[n.word_id].notes.push(n); });
+}
+function findWord(text) {
+  const k = text.trim().toLowerCase();
+  return words.find(w => w.word.trim().toLowerCase() === k);
+}
+
+/* ================= 页面切换 ================= */
+const titles = { add: "记录", list: "单词", review: "复习", settings: "设置" };
+document.querySelectorAll("nav button").forEach(b => {
+  b.addEventListener("click", () => {
+    document.querySelectorAll("nav button").forEach(x => x.classList.toggle("active", x === b));
+    document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
+    $("page-" + b.dataset.page).classList.add("active");
+    $("pageTitle").textContent = titles[b.dataset.page];
+    if (b.dataset.page === "review") startReview(false);
+    if (b.dataset.page === "settings") renderStats();
+  });
+});
+
+/* ================= 记录页 ================= */
+document.querySelectorAll(".chip").forEach(c => {
+  c.addEventListener("click", () => {
+    const f = c.dataset.f;
+    const box = document.querySelector(`.ef[data-f="${f}"]`);
+    const show = box.style.display === "none";
+    box.style.display = show ? "block" : "none";
+    c.classList.toggle("on", show);
+  });
+});
+$("fWord").addEventListener("input", () => {
+  const v = $("fWord").value.trim();
+  const ex = v && findWord(v);
+  $("dupHint").textContent = ex ? `「${ex.word}」已存在 ${ex.notes.length} 条注释，保存后将追加到该单词下。` : "";
+});
+
+$("btnSave").addEventListener("click", async () => {
+  const w = $("fWord").value.trim();
+  const note = $("fNote").value.trim();
+  if (!w) return toast("请输入单词", true);
+  if (!note) return toast("请填写注释", true);
+  if (!hasCfg()) return toast("请先在设置页配置 Supabase", true);
+  const btn = $("btnSave"); btn.disabled = true;
+  try {
+    let word = findWord(w);
+    if (!word) {
+      try {
+        const rows = await api("words", { method: "POST", body: { word: w } });
+        word = { ...rows[0], notes: [] };
+        words.push(word);
+      } catch (e) {
+        if (e.status === 409) { // 并发/大小写冲突，重新拉取
+          await loadAll();
+          word = findWord(w);
+          if (!word) throw e;
+        } else throw e;
+      }
+    }
+    const body = {
+      word_id: word.id, note,
+      pos: $("fPos").value.trim() || null,
+      meaning: $("fMeaning").value.trim() || null,
+      example: $("fExample").value.trim() || null
+    };
+    const rows = await api("notes", { method: "POST", body });
+    word.notes.push(rows[0]);
+    setSync("ok");
+    ["fWord", "fNote", "fPos", "fMeaning", "fExample"].forEach(id => $(id).value = "");
+    $("dupHint").textContent = "";
+    renderAll();
+    toast("已保存 ✓");
+  } catch (e) {
+    setSync("err");
+    toast("保存失败：" + e.message, true);
+  } finally { btn.disabled = false; }
+});
+
+/* ================= 单词页 ================= */
+$("searchBox").addEventListener("input", renderList);
+
+function renderList() {
+  const q = $("searchBox").value.trim().toLowerCase();
+  const box = $("wordList");
+  const match = w => !q ||
+    w.word.toLowerCase().includes(q) ||
+    w.notes.some(n =>
+      (n.note || "").toLowerCase().includes(q) ||
+      (n.meaning || "").toLowerCase().includes(q) ||
+      (n.example || "").toLowerCase().includes(q) ||
+      (n.pos || "").toLowerCase().includes(q));
+  const list = words.filter(match).sort((a, b) => a.word.localeCompare(b.word));
+  if (!list.length) {
+    box.innerHTML = `<div class="empty">${q ? "没有匹配的结果" : "还没有单词<br>去「记录」页添加第一个吧"}</div>`;
+    return;
+  }
+  box.innerHTML = list.map(w => `
+    <div class="card" data-wid="${w.id}">
+      <div class="word-head" data-act="toggle">
+        <span class="w">${esc(w.word)}</span>
+        <span class="meta">
+          ${w.unknown_count > 0 ? `<span class="badge unk">待复习</span>` : ""}
+          <span class="badge">${w.notes.length} 条注释</span>
+          <span class="arrow">▾</span>
+        </span>
+      </div>
+      <div class="notes" style="display:none">
+        ${w.notes.slice().sort((a, b) => b.created_at.localeCompare(a.created_at)).map(n => `
+          <div class="note-item" data-nid="${n.id}">
+            <div class="nt">${esc(n.note)}</div>
+            ${n.pos || n.meaning || n.example ? `<div class="note-fields">
+              ${n.pos ? `<div><b>词性</b> ${esc(n.pos)}</div>` : ""}
+              ${n.meaning ? `<div><b>意思</b> ${esc(n.meaning)}</div>` : ""}
+              ${n.example ? `<div><b>例句</b> ${esc(n.example)}</div>` : ""}
+            </div>` : ""}
+            <div class="note-foot">
+              <time>${fmtDate(n.created_at)}</time>
+              <span class="ops">
+                <button data-act="edit">编辑</button>
+                <button class="del" data-act="delnote">删除</button>
+              </span>
+            </div>
+          </div>`).join("")}
+        <div class="word-del"><button data-act="delword">删除该单词及全部注释</button></div>
+      </div>
+    </div>`).join("");
+}
+
+$("wordList").addEventListener("click", async e => {
+  const actEl = e.target.closest("[data-act]");
+  if (!actEl) return;
+  const card = e.target.closest(".card");
+  const wid = card.dataset.wid;
+  const word = words.find(w => w.id === wid);
+  const act = actEl.dataset.act;
+  if (act === "toggle") {
+    const ns = card.querySelector(".notes");
+    const open = ns.style.display === "none";
+    ns.style.display = open ? "block" : "none";
+    card.querySelector(".arrow").textContent = open ? "▴" : "▾";
+  } else if (act === "edit") {
+    const nid = actEl.closest(".note-item").dataset.nid;
+    const n = word.notes.find(x => x.id === nid);
+    editingNoteId = nid;
+    $("eNote").value = n.note || "";
+    $("ePos").value = n.pos || "";
+    $("eMeaning").value = n.meaning || "";
+    $("eExample").value = n.example || "";
+    $("editMask").classList.add("show");
+  } else if (act === "delnote") {
+    if (!confirm("删除这条注释？")) return;
+    try {
+      await api("notes?id=eq." + actEl.closest(".note-item").dataset.nid, { method: "DELETE" });
+      word.notes = word.notes.filter(x => x.id !== actEl.closest(".note-item").dataset.nid);
+      renderAll(); toast("已删除");
+    } catch (err) { toast("删除失败：" + err.message, true); }
+  } else if (act === "delword") {
+    if (!confirm(`删除「${word.word}」及其全部 ${word.notes.length} 条注释？此操作不可恢复。`)) return;
+    try {
+      await api("words?id=eq." + wid, { method: "DELETE" });
+      words = words.filter(w => w.id !== wid);
+      renderAll(); toast("已删除");
+    } catch (err) { toast("删除失败：" + err.message, true); }
+  }
+});
+
+$("btnEditCancel").addEventListener("click", () => $("editMask").classList.remove("show"));
+$("btnEditSave").addEventListener("click", async () => {
+  const note = $("eNote").value.trim();
+  if (!note) return toast("注释不能为空", true);
+  const body = {
+    note,
+    pos: $("ePos").value.trim() || null,
+    meaning: $("eMeaning").value.trim() || null,
+    example: $("eExample").value.trim() || null
+  };
+  try {
+    const rows = await api("notes?id=eq." + editingNoteId, { method: "PATCH", body });
+    for (const w of words) {
+      const i = w.notes.findIndex(n => n.id === editingNoteId);
+      if (i >= 0) { w.notes[i] = rows[0]; break; }
+    }
+    $("editMask").classList.remove("show");
+    renderAll(); toast("已保存 ✓");
+  } catch (err) { toast("保存失败：" + err.message, true); }
+});
+
+/* ================= 复习页 ================= */
+function shuffle(a) {
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+function startReview(reshuffle) {
+  const onlyUnk = $("onlyUnknown").checked;
+  let pool = words.filter(w => w.notes.length > 0);
+  if (onlyUnk) pool = pool.filter(w => w.unknown_count > 0);
+  review.deck = shuffle(pool.slice());
+  review.idx = 0;
+  showCard();
+}
+function showCard() {
+  $("reviewEmpty").style.display = "none";
+  $("reviewDone").style.display = "none";
+  $("reviewMain").style.display = "block";
+  if (!review.deck.length) {
+    $("reviewMain").style.display = "none";
+    $("reviewEmpty").style.display = "block";
+    return;
+  }
+  if (review.idx >= review.deck.length) {
+    $("reviewMain").style.display = "none";
+    $("reviewDone").style.display = "block";
+    return;
+  }
+  const w = review.deck[review.idx];
+  $("reviewProg").textContent = `${review.idx + 1} / ${review.deck.length}`;
+  $("cardWord").textContent = w.word;
+  $("cardBack").innerHTML = `
+    <div class="bw">${esc(w.word)}</div>
+    ${w.notes.slice().sort((a, b) => b.created_at.localeCompare(a.created_at)).map(n => `
+      <div class="note-item">
+        <div class="nt">${esc(n.note)}</div>
+        ${n.pos || n.meaning || n.example ? `<div class="note-fields">
+          ${n.pos ? `<div><b>词性</b> ${esc(n.pos)}</div>` : ""}
+          ${n.meaning ? `<div><b>意思</b> ${esc(n.meaning)}</div>` : ""}
+          ${n.example ? `<div><b>例句</b> ${esc(n.example)}</div>` : ""}
+        </div>` : ""}
+      </div>`).join("")}`;
+  $("flipCard").classList.remove("flipped");
+}
+$("flipCard").addEventListener("click", () => $("flipCard").classList.toggle("flipped"));
+$("onlyUnknown").addEventListener("change", () => startReview());
+$("btnAgain").addEventListener("click", () => startReview());
+
+async function mark(known) {
+  const w = review.deck[review.idx];
+  if (!w) return;
+  const newCount = known ? 0 : (w.unknown_count || 0) + 1;
+  w.unknown_count = newCount; // 乐观更新
+  review.idx++;
+  showCard();
+  try {
+    await api("words?id=eq." + w.id, { method: "PATCH", body: { unknown_count: newCount } });
+    setSync("ok");
+  } catch (e) {
+    setSync("err");
+    toast("标记同步失败（已本地记录）", true);
+  }
+}
+$("btnYes").addEventListener("click", () => mark(true));
+$("btnNo").addEventListener("click", () => mark(false));
+
+/* ================= 设置页 ================= */
+function renderStats() {
+  $("statWords").textContent = words.length;
+  $("statNotes").textContent = words.reduce((s, w) => s + w.notes.length, 0);
+  $("statUnknown").textContent = words.filter(w => w.unknown_count > 0).length;
+}
+$("cfgUrl").value = cfg.url || "";
+$("cfgKey").value = cfg.key || "";
+$("btnSaveCfg").addEventListener("click", async () => {
+  cfg = { url: $("cfgUrl").value.trim(), key: $("cfgKey").value.trim() };
+  localStorage.setItem(LS_CFG, JSON.stringify(cfg));
+  renderSetupWarn();
+  if (!hasCfg()) return toast("配置已清空", false);
+  toast("正在连接…");
+  await loadAll();
+  renderStats();
+  toast("已连接并同步 ✓");
+});
+$("btnRefresh").addEventListener("click", async () => { await loadAll(); renderStats(); toast("已刷新"); });
+
+$("btnExport").addEventListener("click", () => {
+  const data = {
+    exported_at: new Date().toISOString(),
+    words: words.map(w => ({
+      word: w.word, unknown_count: w.unknown_count,
+      notes: w.notes.map(n => ({ note: n.note, pos: n.pos, meaning: n.meaning, example: n.example, created_at: n.created_at }))
+    }))
+  };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "vocab-backup-" + new Date().toISOString().slice(0, 10) + ".json";
+  a.click();
+  URL.revokeObjectURL(a.href);
+});
+
+$("btnImport").addEventListener("click", () => $("importFile").click());
+$("importFile").addEventListener("change", async e => {
+  const file = e.target.files[0];
+  e.target.value = "";
+  if (!file) return;
+  if (!hasCfg()) return toast("请先配置 Supabase", true);
+  let data;
+  try { data = JSON.parse(await file.text()); }
+  catch { return toast("JSON 解析失败", true); }
+  if (!Array.isArray(data.words)) return toast("文件格式不正确", true);
+  let addedW = 0, addedN = 0, skipped = 0;
+  try {
+    for (const iw of data.words) {
+      if (!iw.word || !Array.isArray(iw.notes)) continue;
+      let word = findWord(iw.word);
+      if (!word) {
+        try {
+          const rows = await api("words", { method: "POST", body: { word: String(iw.word).trim() } });
+          word = { ...rows[0], notes: [] };
+          words.push(word);
+          addedW++;
+        } catch (err) {
+          if (err.status === 409) { await loadAll(); word = findWord(iw.word); if (!word) throw err; }
+          else throw err;
+        }
+      }
+      for (const n of iw.notes) {
+        if (!n.note) continue;
+        if (word.notes.some(x => x.note === n.note)) { skipped++; continue; }
+        const rows = await api("notes", { method: "POST", body: {
+          word_id: word.id, note: n.note,
+          pos: n.pos || null, meaning: n.meaning || null, example: n.example || null
+        }});
+        word.notes.push(rows[0]);
+        addedN++;
+      }
+    }
+    renderAll(); renderStats();
+    toast(`导入完成：新增 ${addedW} 词 / ${addedN} 条注释，跳过重复 ${skipped} 条`);
+  } catch (err) { toast("导入中断：" + err.message, true); }
+});
+
+/* ================= 渲染汇总 ================= */
+function renderSetupWarn() {
+  $("setupWarn").style.display = hasCfg() ? "none" : "block";
+}
+function renderAll() {
+  renderSetupWarn();
+  renderList();
+  renderStats();
+}
+
+renderAll();
+loadAll();
+</script>
+</body>
+</html>
+
